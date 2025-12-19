@@ -5,6 +5,7 @@ import time
 import os
 import json
 import uuid
+import base64
 
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="GLIZZYGPT 2.0", page_icon="🌭", layout="wide")
@@ -35,14 +36,55 @@ def save_data(data):
 
 user_data = load_data()
 
-# --- 3. BOOTUP SYSTEM ---
+# --- 3. THEME & PALETTE DEFINITIONS (FULLY RESTORED) ---
+THEMES = {
+    "🌭 Gourmet Glizzies": {
+        "Classic Mustard": {"bg": "#FFCC00", "side_light": "#F0F2F6", "text": "#000000"},
+        "Spicy Sriracha": {"bg": "#FF4B4B", "side_light": "#F5E6E6", "text": "#FFFFFF"},
+        "Neon Relish": {"bg": "#39FF14", "side_light": "#E6F5E6", "text": "#000000"},
+        "BBQ Smoke": {"bg": "#4E2728", "side_light": "#F5EBEB", "text": "#FFFFFF"},
+    },
+    "🎄 Holiday Specials": {
+        "Glizzy Xmas": {"bg": "#2F5233", "side_light": "#E6F0E6", "text": "#FFFFFF"},
+        "Spooky Sausage": {"bg": "#FF8C00", "side_light": "#F5EBE6", "text": "#000000"},
+        "Valentine Frank": {"bg": "#FF69B4", "side_light": "#F5E6F0", "text": "#FFFFFF"},
+    },
+    "🎨 Solid Colors": {
+        "Midnight Blue": {"bg": "#191970", "side_light": "#E6E6F5", "text": "#FFFFFF"},
+        "Forest Green": {"bg": "#228B22", "side_light": "#E6F5E6", "text": "#FFFFFF"},
+        "Cyberpunk Pink": {"bg": "#FF00FF", "side_light": "#F5E6F5", "text": "#FFFFFF"},
+    },
+    "✨ Custom Mode": {
+        "User Defined": {"bg": "#FFFFFF", "side_light": "#F0F2F6", "text": "#000000"}
+    }
+}
+
+# --- 4. AUDIO PLAYER FUNCTION (BASE64) ---
+def play_audio(text, lang, speed):
+    try:
+        tts = gTTS(text=text, lang=lang, slow=(speed < 1.0))
+        tts.save("temp_voice.mp3")
+        with open("temp_voice.mp3", "rb") as f:
+            data = f.read()
+            b64 = base64.b64encode(data).decode()
+            md = f"""
+                <audio autoplay="true">
+                <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+                </audio>
+                """
+            st.markdown(md, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"TTS Engine Error: {e}")
+
+# --- 5. BOOTUP SYSTEM ---
 if "booted" not in st.session_state:
     placeholder = st.empty()
     boot_logs = [
-        "Initializing GLIZZY_OS v2.0.8...",
-        "Patching Audio Drivers... [OK]",
-        f"USER_ID: {st.session_state.user_id} DETECTED.",
-        "SYSTEM ONLINE. VOLUME 100%."
+        "Initializing GLIZZY_OS v2.1.0...",
+        "Loading Theme Palettes... [OK]",
+        "Configuring Binary Rain & Glizzy Physics...",
+        "Sovereign ID: " + st.session_state.user_id + " Found.",
+        "SYSTEM ONLINE. VOICE COMMANDS ENABLED."
     ]
     full_log = ""
     for log in boot_logs:
@@ -57,7 +99,7 @@ if "booted" not in st.session_state:
     placeholder.empty()
     st.session_state.booted = True
 
-# --- 4. SIDEBAR ---
+# --- 6. SIDEBAR: THEMES & VOICE ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 80px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
@@ -65,19 +107,20 @@ with st.sidebar:
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
     with st.expander("🎨 Appearance & Themes", expanded=True):
-        custom_color = st.color_picker("Choose Your Theme Color", "#FF9933")
+        cat = st.selectbox("Category", list(THEMES.keys()))
+        style_name = st.selectbox("Style", list(THEMES[cat].keys()))
+        current_style = THEMES[cat][style_name]
+        
+        if cat == "✨ Custom Mode":
+            user_color = st.color_picker("Choose Your Color", "#FF9933")
+            current_style["bg"] = user_color
+            
         bg_opacity = st.slider("Pattern Visibility", 0.0, 1.0, 0.4)
     
     with st.expander("🔊 TTS & Voice Control", expanded=True):
         enable_tts = st.toggle("Enable Voice Output", value=True)
         voice_lang = st.selectbox("Voice Accent", ["en", "en-uk", "en-au", "en-in"])
         voice_speed = st.slider("Speech Speed", 0.5, 1.5, 1.0)
-        
-        # DEBUG BUTTON
-        if st.button("🔊 Test Audio Output"):
-            test_tts = gTTS(text="Mustard check, one two, one two.", lang=voice_lang)
-            test_tts.save("test.mp3")
-            st.audio("test.mp3", autoplay=True)
 
     st.divider()
     st.markdown("""<style>div.stButton > button:first-child {background-color: #FF9933 !important; color: black !important; font-weight: bold !important; width: 100% !important;}</style>""", unsafe_allow_html=True)
@@ -95,10 +138,10 @@ with st.sidebar:
             st.session_state.current_cid = cid
             st.rerun()
 
-# --- 5. DYNAMIC CSS ---
-main_txt_col = "#FFFFFF" if dark_mode else "#000000"
-main_bg_col = "#121212" if dark_mode else custom_color
-sidebar_col = "#1E1E1E" if dark_mode else "#F0F2F6"
+# --- 7. DYNAMIC CSS ---
+main_txt_col = "#FFFFFF" if dark_mode else current_style["text"]
+main_bg_col = "#121212" if dark_mode else current_style["bg"]
+sidebar_col = "#1E1E1E" if dark_mode else current_style["side_light"]
 
 st.markdown(f"""
     <style>
@@ -112,12 +155,12 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. CHAT LOGIC ---
+# --- 8. CHAT LOGIC ---
 if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
     
-    audio_val = st.audio_input("Record your Glizzy command") 
+    audio_val = st.audio_input("Record your Glizzy command")
 
     for m in messages:
         with st.chat_message(m["role"], avatar="🌭" if m["role"]=="assistant" else "👤"):
@@ -142,7 +185,7 @@ if "current_cid" in st.session_state:
 
     if final_prompt:
         if any(q in final_prompt.lower() for q in ["who are you", "what model"]):
-            res_text = "I am GLIZZYGPT 2.0! Your sonic, sovereign hotdog intelligence."
+            res_text = "I am GLIZZYGPT 2.0! Your private, uniquely-processed intelligence."
         else:
             try:
                 stream = client.chat.completions.create(
@@ -165,16 +208,8 @@ if "current_cid" in st.session_state:
         user_data["sessions"][cid] = messages
         save_data(user_data)
         
-        # --- IMPROVED TTS TRIGGER ---
         if enable_tts:
-            try:
-                tts = gTTS(text=res_text, lang=voice_lang, slow=(voice_speed < 1.0))
-                # Use a unique filename for each turn to force browser refresh
-                audio_file = f"speech_{int(time.time())}.mp3"
-                tts.save(audio_file)
-                st.audio(audio_file, autoplay=True)
-            except Exception as e:
-                st.error(f"TTS Error: {e}")
+            play_audio(res_text, voice_lang, voice_speed)
             
         st.rerun()
 else:
