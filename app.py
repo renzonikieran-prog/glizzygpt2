@@ -1,3 +1,18 @@
+
+import streamlit as st
+from PIL import Image
+
+# 1. SET TAB TITLE AND ICON (FAVICON)
+st.set_page_config(
+    page_title="Glizzy GPT",
+    page_icon="glizzy_icon.png", # This uses your uploaded icon
+    layout="wide"
+)
+
+# 2. ADD LOGO TO SIDEBAR
+st.logo("glizzy_icon.png", icon_image="glizzy_icon.png")
+
+# ... rest of your code ...
 import streamlit as st
 from groq import Groq
 import time
@@ -103,3 +118,4 @@ if user_input:
         # Optional TTS
         if use_tts:
             text_to_speech(full_res)
+
