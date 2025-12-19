@@ -50,7 +50,7 @@ with st.sidebar:
 
     st.divider()
 
-    # --- HOT DOG COLORED BUTTON (Orange/Brown with Black Text) ---
+    # --- HOT DOG COLORED BUTTON ---
     st.markdown("""
         <style>
         div.stButton > button:first-child {
@@ -74,9 +74,11 @@ with st.sidebar:
         if st.button(st.session_state.chat_names[cid], key=cid):
             st.session_state.current_chat_id = cid
 
-# --- 5. DYNAMIC CSS ---
+# --- 5. DYNAMIC CSS (FIXED SIDEBAR COLORS) ---
 text_col = "#FFFFFF" if dark_mode else "#000000"
 bg_col = "#121212" if dark_mode else "#FFCC00"
+# Sidebar: Dark Grey (#1E1E1E) vs Light Grey (#F0F2F6)
+side_col = "#1E1E1E" if dark_mode else "#F0F2F6"
 
 st.markdown(f"""
     <style>
@@ -86,6 +88,16 @@ st.markdown(f"""
         background-color: {bg_col};
     }}
     .stApp, p, h1, h2, h3, span, label {{ color: {text_col} !important; }}
+    
+    /* Target the Sidebar specifically */
+    [data-testid="stSidebar"] {{
+        background-color: {side_col} !important;
+    }}
+    
+    /* Ensure sidebar text stays readable */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] span {{
+        color: {text_col} !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -105,7 +117,6 @@ if st.session_state.current_chat_id:
         else:
             try:
                 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-                # FIX: Properly extracting content from stream
                 stream = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "system", "content": "You are GLIZZYGPT 2.0."}] + messages + [{"role": "user", "content": prompt}],
@@ -113,9 +124,6 @@ if st.session_state.current_chat_id:
                 )
                 
                 response_text = ""
-                placeholder = st.empty()
-                
-                # Unpacking the Groq chunks correctly
                 for chunk in stream:
                     if chunk.choices[0].delta.content:
                         response_text += chunk.choices[0].delta.content
@@ -129,7 +137,6 @@ if st.session_state.current_chat_id:
         messages.append({"role": "user", "content": prompt})
         messages.append({"role": "assistant", "content": response_text})
         
-        # Force refresh to show text instead of raw data
         st.rerun()
 
         if not disable_tts:
