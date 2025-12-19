@@ -32,27 +32,63 @@ def save_data(data):
 
 user_data = load_data()
 
-# --- 3. THE FULL COLOR PALETTE (RE-ADDED) ---
+# --- 3. FUN & REALISTIC BOOTUP SYSTEM ---
+if "booted" not in st.session_state:
+    placeholder = st.empty()
+    boot_phases = [
+        {"msg": "LOADING GLIZZY_KERNEL v2.0.5...", "sleep": 0.4},
+        {"msg": "MOUNTING /dev/buns/seeded...", "sleep": 0.3},
+        {"msg": "INITIALIZING MUSTARD_V_ENGINE...", "sleep": 0.4},
+        {"msg": "DECRYPTING MEAT_VALUES...", "sleep": 0.3},
+        {"msg": "ERROR: KETCHUP_OVERFLOW_DETECTED (Ignoring...)", "sleep": 0.5},
+        {"msg": "CALIBRATING RELISH_NEURAL_NET...", "sleep": 0.4},
+        {"msg": "GLIZZY_ID: " + st.session_state.user_id + " VERIFIED.", "sleep": 0.2},
+        {"msg": "SYSTEM ONLINE. ENJOY THE BITE.", "sleep": 0.6}
+    ]
+    
+    full_log = ""
+    for phase in boot_phases:
+        # Generate flying binary and hot dogs for the visual header
+        binary_rain = " ".join(["10"[i%2] for i in range(15)])
+        flying_glizzies = "🌭 " * (int(time.time()) % 5 + 2)
+        
+        full_log += f"[SYSTEM]: {phase['msg']}\n"
+        
+        placeholder.markdown(f"""
+        <div style="background-color: #000; color: #39FF14; font-family: 'Courier New', Courier, monospace; padding: 30px; height: 100vh; border: 4px solid #444;">
+            <div style="text-align:center; margin-bottom: 20px;">
+                <h2 style="color: #FF9933;">{flying_glizzies}</h2>
+                <code style="color: #00FF00;">{binary_rain} {binary_rain}</code>
+            </div>
+            <hr style="border-color: #333;">
+            <pre style="white-space: pre-wrap; font-size: 14px;">{full_log}</pre>
+            <div style="position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);">
+                <div style="width: 300px; height: 10px; background: #333; border-radius: 5px;">
+                    <div style="width: {min((len(full_log)/200)*100, 100)}%; height: 100%; background: #FF9933; border-radius: 5px;"></div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        time.sleep(phase['sleep'])
+    
+    placeholder.empty()
+    st.session_state.booted = True
+
+# --- 4. THEMES & CUSTOM PALETTE ---
 THEMES = {
     "🌭 Gourmet Glizzies": {
-        "Classic Mustard": {"bg": "#FFCC00", "side_light": "#F0F2F6", "text": "#000000", "is_dark": False},
-        "Spicy Sriracha": {"bg": "#FF4B4B", "side_light": "#F5E6E6", "text": "#FFFFFF", "is_dark": True},
-        "Neon Relish": {"bg": "#39FF14", "side_light": "#E6F5E6", "text": "#000000", "is_dark": False},
-        "BBQ Smoke": {"bg": "#4E2728", "side_light": "#F5EBEB", "text": "#FFFFFF", "is_dark": True},
+        "Classic Mustard": {"bg": "#FFCC00", "side": "#F0F2F6", "text": "#000000"},
+        "Spicy Sriracha": {"bg": "#FF4B4B", "side": "#F5E6E6", "text": "#FFFFFF"},
+        "Neon Relish": {"bg": "#39FF14", "side": "#E6F5E6", "text": "#000000"},
     },
     "🎄 Holiday Specials": {
-        "Glizzy Xmas": {"bg": "#2F5233", "side_light": "#E6F0E6", "text": "#FFFFFF", "is_dark": True},
-        "Spooky Sausage": {"bg": "#FF8C00", "side_light": "#F5EBE6", "text": "#000000", "is_dark": False},
-        "Valentine Frank": {"bg": "#FF69B4", "side_light": "#F5E6F0", "text": "#FFFFFF", "is_dark": True},
+        "Glizzy Xmas": {"bg": "#2F5233", "side": "#E6F0E6", "text": "#FFFFFF"},
+        "Spooky Sausage": {"bg": "#FF8C00", "side": "#F5EBE6", "text": "#000000"},
     },
-    "🎨 Solid Colors": {
-        "Midnight Blue": {"bg": "#191970", "side_light": "#E6E6F5", "text": "#FFFFFF", "is_dark": True},
-        "Forest Green": {"bg": "#228B22", "side_light": "#E6F5E6", "text": "#FFFFFF", "is_dark": True},
-        "Cyberpunk Pink": {"bg": "#FF00FF", "side_light": "#F5E6F5", "text": "#FFFFFF", "is_dark": True},
-    }
+    "🎨 Custom Glizzy": {"Custom Mode": {"bg": "#FFFFFF", "side": "#F0F2F6", "text": "#000000"}}
 }
 
-# --- 4. SIDEBAR: THEMES & MEMORY ---
+# --- 5. SIDEBAR: THEMES, TOOLS & MEMORY ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 80px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
@@ -63,15 +99,22 @@ with st.sidebar:
         cat = st.selectbox("Category", list(THEMES.keys()))
         style_name = st.selectbox("Style", list(THEMES[cat].keys()))
         current_style = THEMES[cat][style_name]
+        
+        if cat == "🎨 Custom Glizzy":
+            custom_color = st.color_picker("Choose Your Bun Color", "#FF9933")
+            current_style["bg"] = custom_color
+            
         bg_opacity = st.slider("Pattern Visibility", 0.0, 1.0, 0.4)
     
-    st.divider()
+    with st.expander("📬 Productivity Tools"):
+        st.button("📧 Connect Email")
+        st.button("🗓️ Connect Calendar")
 
-    # HOT DOG BUTTON STYLING (Forced Contrast)
+    st.divider()
     st.markdown("""<style>div.stButton > button:first-child {background-color: #FF9933 !important; color: black !important; font-weight: bold !important; width: 100% !important;}</style>""", unsafe_allow_html=True)
     
     if st.button("+ New Unique Chat"):
-        cid = str(time.uuid4())[:12]
+        cid = str(uuid.uuid4())[:12]
         user_data["sessions"][cid] = []
         user_data["names"][cid] = "New Relish Chat"
         save_data(user_data)
@@ -84,16 +127,10 @@ with st.sidebar:
             st.session_state.current_cid = cid
             st.rerun()
 
-# --- 5. DYNAMIC LEGIBILITY ENGINE ---
-# This ensures text is ALWAYS readable regardless of background color
-if dark_mode:
-    main_txt_col = "#FFFFFF"
-    main_bg_col = "#121212"
-    sidebar_col = "#1E1E1E"
-else:
-    main_txt_col = current_style["text"]
-    main_bg_col = current_style["bg"]
-    sidebar_col = current_style["side_light"]
+# --- 6. DYNAMIC CSS ---
+main_txt_col = "#FFFFFF" if dark_mode else current_style["text"]
+main_bg_col = "#121212" if dark_mode else current_style["bg"]
+sidebar_col = "#1E1E1E" if dark_mode else current_style["side"]
 
 st.markdown(f"""
     <style>
@@ -102,23 +139,13 @@ st.markdown(f"""
                     url("https://www.transparenttextures.com/patterns/food.png");
         background-color: {main_bg_col};
     }}
-    /* Legibility Overrides */
-    .stApp, p, h1, h2, h3, span, label, .stMarkdown {{ 
-        color: {main_txt_col} !important; 
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5) if not {dark_mode} else none;
-    }}
+    .stApp, p, h1, h2, h3, span, label, .stMarkdown {{ color: {main_txt_col} !important; }}
     [data-testid="stSidebar"] {{ background-color: {sidebar_col} !important; }}
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {{ color: {main_txt_col} !important; }}
-    
-    /* Input Box Legibility */
-    .stChatInput textarea {{
-        background-color: rgba(255,255,255,0.1) !important;
-        color: {main_txt_col} !important;
-    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. CHAT LOGIC ---
+# --- 7. CHAT LOGIC ---
 if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
