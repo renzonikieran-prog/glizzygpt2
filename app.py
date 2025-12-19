@@ -1,101 +1,85 @@
-
-import streamlit as st
-from PIL import Image
-
-# 1. SET TAB TITLE AND ICON (FAVICON)
-st.set_page_config(
-    page_title="Glizzy GPT",
-    page_icon="glizzy_icon.png", # This uses your uploaded icon
-    layout="wide"
-)
-
-# 2. ADD LOGO TO SIDEBAR
-st.logo("glizzy_icon.png", icon_image="glizzy_icon.png")
-
-# ... rest of your code ...
 import streamlit as st
 from groq import Groq
 import time
-import base64
-from streamlit_tts import text_to_speech
 
-# --- 1. BOOT SEQUENCE (Binary & Equations) ---
+# --- 1. SET PAGE CONFIG (MUST BE FIRST) ---
+st.set_page_config(
+    page_title="Glizzy GPT",
+    page_icon="glizzy_icon.png", 
+    layout="wide"
+)
+
+# --- 2. BRANDING & LOGO (SAFE LOAD) ---
+try:
+    # This is the modern way to add a sidebar logo
+    st.logo("glizzy_icon.png", icon_image="glizzy_icon.png")
+except Exception:
+    # Fallback if st.logo fails or file is missing
+    st.sidebar.image("glizzy_icon.png", width=100) if "glizzy_icon.png" else st.sidebar.title("🌭 Glizzy GPT")
+
+# --- 3. BOOT SEQUENCE (Binary & Equations) ---
 if "booted" not in st.session_state:
     placeholder = st.empty()
-    for i in range(10):
-        binary_mess = " ".join([format(i, 'b') for i in range(50)])
-        placeholder.markdown(f"**LOADING GLIZZY OS...**\n\n`{binary_mess}`\n\n`E=mc^2 + Mustard = 🌭`")
+    for i in range(8):
+        binary = " ".join([format(i, 'b') for i in range(40)])
+        placeholder.markdown(f"**LOADING GLIZZY OS...**\n\n`{binary}`\n\n`E=mc^2 + Mustard = 🌭`")
         time.sleep(0.2)
     placeholder.empty()
     st.session_state.booted = True
 
-# --- 2. THEME & BACKGROUND ENGINE ---
-# Link to a Glizzy Pattern image or upload your own to GitHub
-GLIZZY_BG_URL = "https://www.transparenttextures.com/patterns/food.png" 
-
+# --- 4. CUSTOM STYLING ---
 st.markdown(f"""
     <style>
     .stApp {{
-        background-image: url("{GLIZZY_BG_URL}");
+        background-image: url("https://www.transparenttextures.com/patterns/food.png");
         background-color: #FF4B4B; /* Glizzy Red */
         background-attachment: fixed;
     }}
     [data-testid="stSidebar"] {{ background-color: #FFCC00; }} /* Mustard Yellow */
+    .stChatMessage {{ background-color: rgba(255, 255, 255, 0.9); border-radius: 15px; margin: 5px; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION MEMORY (Individual Chat Memory) ---
+# --- 5. SESSION MEMORY MANAGER ---
 if "sessions" not in st.session_state:
-    st.session_state.sessions = {"Chat 1": []}
+    st.session_state.sessions = {"Initial Glizzy": []}
 if "current_session" not in st.session_state:
-    st.session_state.current_session = "Chat 1"
+    st.session_state.current_session = "Initial Glizzy"
 
 with st.sidebar:
-    st.title("🌭 Glizzy Settings")
+    st.title("🌭 Settings")
     
-    # Session Manager
-    new_chat = st.button("+ New Glizzy Chat")
-    if new_chat:
-        new_name = f"Chat {len(st.session_state.sessions) + 1}"
+    # Session Management
+    if st.button("+ New Glizzy Memory"):
+        new_name = f"Glizzy Chat {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[new_name] = []
         st.session_state.current_session = new_name
     
     st.session_state.current_session = st.selectbox(
-        "Select Memory Device", 
+        "Chat Memory Devices", 
         options=list(st.session_state.sessions.keys()),
         index=list(st.session_state.sessions.keys()).index(st.session_state.current_session)
     )
-
+    
     st.divider()
-    use_tts = st.toggle("Enable Voice Output (TTS)")
-    use_voice = st.toggle("Enable Voice Input (Mic)")
+    st.info("Glizzy GPT v2.0 - Running on Llama 3")
 
-# --- 4. AI LOGIC ---
+# --- 6. AI LOGIC ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-messages = st.session_state.sessions[st.session_state.current_session]
+current_messages = st.session_state.sessions[st.session_state.current_session]
 
-st.title(f"🌭 Glizzy GPT: {st.session_state.current_session}")
+st.title(f"🌭 {st.session_state.current_session}")
 
-# Display Chat
-for m in messages:
+# Display Chat History
+for m in current_messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# Voice Input Handling
-user_input = None
-if use_voice:
-    audio_val = st.audio_input("Speak to the Glizzy") # New Streamlit Feature
-    if audio_val:
-        st.info("Audio recorded! (Note: Speech-to-Text requires an extra API call like Whisper)")
-
-# Standard Text Input
+# User Interaction
 if prompt := st.chat_input("Relish the conversation..."):
-    user_input = prompt
-
-if user_input:
-    messages.append({"role": "user", "content": user_input})
+    current_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="🌭"):
         placeholder = st.empty()
@@ -103,7 +87,7 @@ if user_input:
         
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": "You are Glizzy GPT. You love hotdogs."}] + messages,
+            messages=[{"role": "system", "content": "You are Glizzy GPT. You are a genius AI that loves hotdogs. You speak in puns."}] + current_messages,
             stream=True
         )
         
@@ -113,9 +97,4 @@ if user_input:
                 placeholder.markdown(full_res + "▌")
         
         placeholder.markdown(full_res)
-        messages.append({"role": "assistant", "content": full_res})
-        
-        # Optional TTS
-        if use_tts:
-            text_to_speech(full_res)
-
+        current_messages.append({"role": "assistant", "content": full_res})
