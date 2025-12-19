@@ -18,6 +18,10 @@ if "user_id" not in st.session_state:
         st.session_state.user_id = new_id
         st.query_params["glizzy_id"] = new_id
 
+# Track the last processed audio to prevent loops
+if "last_processed_audio" not in st.session_state:
+    st.session_state.last_processed_audio = None
+
 USER_PATH = f"glizzy_data_{st.session_state.user_id}.json"
 
 def load_data():
@@ -32,15 +36,14 @@ def save_data(data):
 
 user_data = load_data()
 
-# --- 3. REALISTIC BOOTUP SYSTEM ---
+# --- 3. BOOTUP SYSTEM ---
 if "booted" not in st.session_state:
     placeholder = st.empty()
     boot_logs = [
-        "Initializing GLIZZY_OS v2.0.6...",
-        "Calibrating Audio Buffers... [OK]",
-        "Waking up the Glizzy-Net...",
-        f"USER_ID: {st.session_state.user_id} FOUND.",
-        "SYSTEM ONLINE. MIC READY."
+        "Initializing GLIZZY_OS v2.0.7...",
+        "Applying Loop-Prevention Patches...",
+        f"USER_ID: {st.session_state.user_id} ACTIVE.",
+        "SYSTEM ONLINE."
     ]
     full_log = ""
     for log in boot_logs:
@@ -51,11 +54,11 @@ if "booted" not in st.session_state:
             <pre>{full_log}</pre>
         </div>
         """, unsafe_allow_html=True)
-        time.sleep(0.3)
+        time.sleep(0.2)
     placeholder.empty()
     st.session_state.booted = True
 
-# --- 4. SIDEBAR: VOICE & CUSTOM PALETTE ---
+# --- 4. SIDEBAR ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 80px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
@@ -109,29 +112,29 @@ if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
     
-    # 🎤 VOICE INPUT
     audio_val = st.audio_input("Record your Glizzy command") #
 
     for m in messages:
         with st.chat_message(m["role"], avatar="🌭" if m["role"]=="assistant" else "👤"):
             st.markdown(m["content"])
 
-    # 7. PROMPT HANDLING (Text or Voice Transcription)
     prompt = st.chat_input("Ask GLIZZYGPT 2.0...")
     
     final_prompt = None
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-    # Handle Audio Transcription if Mic used
-    if audio_val:
-        with st.status("Transcribing your Glizzy voice..."):
-            # Whisper API Call
+    # 7. FIXED PROMPT HANDLING (LOOP PREVENTION)
+    # Check if we have new audio that hasn't been processed yet
+    if audio_val and audio_val != st.session_state.last_processed_audio:
+        with st.status("Transcribing..."):
             transcription = client.audio.transcriptions.create(
                 file=("sample.wav", audio_val.getvalue()),
                 model="whisper-large-v3",
                 response_format="text"
             )
             final_prompt = transcription
+            # Mark this specific audio as processed
+            st.session_state.last_processed_audio = audio_val 
     elif prompt:
         final_prompt = prompt
 
