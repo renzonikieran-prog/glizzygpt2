@@ -1,76 +1,119 @@
 import streamlit as st
-import streamlit_authenticator as stauth
 from groq import Groq
 from gtts import gTTS
 import time
-import json
 import os
+import json
+import uuid
 
-# --- 1. USER AUTHENTICATION SYSTEM ---
-# In a real app, you'd store these in a database. For now, we use st.secrets.
-names = ['Glizzy Master', 'Frank Friend']
-usernames = ['admin', 'user1']
-passwords = ['hotdog123', 'mustard456'] # These should be hashed in production
+# --- 1. SET PAGE CONFIG ---
+st.set_page_config(page_title="GLIZZYGPT 2.0", page_icon="🌭", layout="wide")
 
-authenticator = stauth.Authenticate(
-    {'usernames': {usernames[i]: {'name': names[i], 'password': passwords[i]} for i in range(len(usernames))}},
-    'glizzy_cookie', 'auth_key', cookie_expiry_days=30
-)
+# --- 2. UNIQUE USER IDENTIFICATION (Prevents Chaos) ---
+# This creates a permanent ID for the browser so every person has a unique app
+if "user_id" not in st.session_state:
+    if "glizzy_user_id" in st.query_params:
+        st.session_state.user_id = st.query_params["glizzy_user_id"]
+    else:
+        new_id = str(uuid.uuid4())[:8]
+        st.session_state.user_id = new_id
+        st.query_params["glizzy_user_id"] = new_id
 
-name, authentication_status, username = authenticator.login('main')
+USER_PATH = f"data_{st.session_state.user_id}.json"
 
-if authentication_status == False:
-    st.error('Username/password is incorrect')
-    st.stop()
-elif authentication_status == None:
-    st.warning('Please enter your username and password to enter the Glizzy-Verse')
-    st.stop()
+def load_data():
+    if os.path.exists(USER_PATH):
+        with open(USER_PATH, "r") as f: return json.load(f)
+    return {"sessions": {}, "names": {}}
 
-# --- 2. UNIQUE USER DIRECTORY ---
-# This ensures a "Completely New GlizzyGPT" for every unique account
-USER_DIR = f"users/{username}"
-if not os.path.exists(USER_DIR):
-    os.makedirs(USER_DIR)
+def save_data(data):
+    with open(USER_PATH, "w") as f: json.dump(data, f)
 
-def save_user_chats(chats):
-    with open(f"{USER_DIR}/history.json", "w") as f:
-        json.dump(chats, f)
+user_data = load_data()
 
-def load_user_chats():
-    if os.path.exists(f"{USER_DIR}/history.json"):
-        with open(f"{USER_DIR}/history.json", "r") as f:
-            return json.load(f)
-    return {}
+# --- 3. BOOT SEQUENCE ---
+if "booted" not in st.session_state:
+    placeholder = st.empty()
+    for i in range(8):
+        binary = "".join(["10"[j%2] for j in range(20)])
+        placeholder.markdown(f"<div style='text-align:center;padding-top:100px;'><h1>🌭</h1><code>GLIZZY_OS_{st.session_state.user_id}: {binary}</code></div>", unsafe_allow_html=True)
+        time.sleep(0.1)
+    placeholder.empty()
+    st.session_state.booted = True
 
-# --- 3. THEME & PALETTE LOGIC (Restored) ---
-THEMES = {
-    "🌭 Gourmet Glizzies": {"Classic Mustard": {"bg": "#FFCC00", "text": "#000000"}},
-    "🗓️ Productivity": {"Email Blue": {"bg": "#1E90FF", "text": "#FFFFFF"}, "Calendar Gold": {"bg": "#D4AF37", "text": "#000000"}}
-}
-
-# --- 4. SIDEBAR: PERSISTENT MEMORY ---
+# --- 4. SIDEBAR: THEMES & PERSISTENT MEMORY ---
 with st.sidebar:
-    st.markdown("<h1>🌭</h1>", unsafe_allow_html=True)
-    st.title(f"Welcome, {name}")
-    authenticator.logout('Logout', 'sidebar')
+    st.markdown("<h1 style='text-align: center; font-size: 80px;'>🌭</h1>", unsafe_allow_html=True)
+    st.caption(f"Sovereign ID: {st.session_state.user_id}")
     
-    # Load this specific user's unique chats
-    if "user_sessions" not in st.session_state:
-        st.session_state.user_sessions = load_user_chats()
-
-    st.subheader("📬 Tools")
-    if st.button("Check Glizzy Email"): st.info("Integration: Connecting to Gmail API...")
-    if st.button("View Glizzy Calendar"): st.info("Integration: Connecting to Google Calendar...")
+    dark_mode = st.toggle("🌙 Dark Mode", value=True)
+    
+    # Tool Integrations (Placeholders for uniqueness)
+    with st.expander("📬 Glizzy Productivity"):
+        st.button("🔗 Link Google Calendar")
+        st.button("📧 Link Glizzy Email")
 
     st.divider()
-    # Unique New Chat for THIS user
-    if st.button("+ New Unique Chat", use_container_width=True):
+    
+    # HOT DOG BUTTON
+    st.markdown("<style>div.stButton > button {background-color: #FF9933 !important; color: black !important; font-weight: bold; width: 100%;}</style>", unsafe_allow_html=True)
+    
+    if st.button("+ New Unique Chat"):
         cid = str(time.time())
-        st.session_state.user_sessions[cid] = []
-        save_user_chats(st.session_state.user_sessions)
+        user_data["sessions"][cid] = []
+        user_data["names"][cid] = "New Relish Chat"
+        save_data(user_data)
+        st.session_state.current_cid = cid
 
-# --- 5. CHAT LOGIC ---
-# Standard GLIZZYGPT 2.0 Identity & Logic
-st.title("GLIZZYGPT 2.0")
-# ... (Previous Chat Display and Groq Logic remains here) ...
-# Note: Ensure you call save_user_chats() after every message to keep it permanent!
+    st.subheader("Memory History")
+    for cid in reversed(list(user_data["sessions"].keys())):
+        if st.button(user_data["names"][cid], key=cid):
+            st.session_state.current_cid = cid
+
+# --- 5. DYNAMIC CSS ---
+bg = "#121212" if dark_mode else "#FFCC00"
+txt = "#FFFFFF" if dark_mode else "#000000"
+side = "#1E1E1E" if dark_mode else "#F0F2F6"
+
+st.markdown(f"<style>.stApp {{background-color: {bg}; color: {txt} !important;}} [data-testid='stSidebar'] {{background-color: {side} !important;}} p, h1, span {{color: {txt} !important;}}</style>", unsafe_allow_html=True)
+
+# --- 6. CHAT LOGIC ---
+if "current_cid" in st.session_state:
+    cid = st.session_state.current_cid
+    messages = user_data["sessions"][cid]
+    
+    st.title(f"🌭 {user_data['names'][cid]}")
+
+    for m in messages:
+        with st.chat_message(m["role"], avatar="🌭" if m["role"]=="assistant" else "👤"):
+            st.markdown(m["content"])
+
+    if prompt := st.chat_input("Relish the conversation..."):
+        # Identity Check
+        if any(q in prompt.lower() for q in ["who are you", "what model"]):
+            res_text = "I am GLIZZYGPT 2.0! Your unique, sovereign hotdog intelligence."
+        else:
+            try:
+                client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+                stream = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "system", "content": "You are GLIZZYGPT 2.0."}] + messages + [{"role": "user", "content": prompt}],
+                    stream=True
+                )
+                res_text = ""
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        res_text += chunk.choices[0].delta.content
+            except Exception as e:
+                res_text = f"Connection Error: {e}"
+
+        if not messages:
+            user_data["names"][cid] = " ".join(prompt.split()[:5])
+            
+        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "assistant", "content": res_text})
+        user_data["sessions"][cid] = messages
+        save_data(user_data)
+        st.rerun()
+else:
+    st.info("👈 Create a '+ New Unique Chat' to begin your private Glizzy session.")
