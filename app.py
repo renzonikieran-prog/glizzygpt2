@@ -17,7 +17,26 @@ if "chat_names" not in st.session_state:
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
 
-# --- 3. BOOT SEQUENCE ---
+# --- 3. THEME & PALETTE DEFINITIONS ---
+THEMES = {
+    "🌭 Gourmet Glizzies": {
+        "Classic Mustard": {"bg": "#FFCC00", "sidebar_light": "#F0F2F6", "text": "#000000"},
+        "Spicy Sriracha": {"bg": "#FF4B4B", "sidebar_light": "#F5E6E6", "text": "#FFFFFF"},
+        "Neon Relish": {"bg": "#39FF14", "sidebar_light": "#E6F5E6", "text": "#000000"},
+    },
+    "🎄 Holiday Specials": {
+        "Glizzy Xmas": {"bg": "#2F5233", "sidebar_light": "#E6F0E6", "text": "#FFFFFF"},
+        "Spooky Sausage": {"bg": "#FF8C00", "sidebar_light": "#F5EBE6", "text": "#000000"},
+        "Valentine Frank": {"bg": "#FF69B4", "sidebar_light": "#F5E6F0", "text": "#FFFFFF"},
+    },
+    "🎨 Solid Colors": {
+        "Midnight Blue": {"bg": "#191970", "sidebar_light": "#E6E6F5", "text": "#FFFFFF"},
+        "Cyberpunk Pink": {"bg": "#FF00FF", "sidebar_light": "#F5E6F5", "text": "#FFFFFF"},
+        "Forest Green": {"bg": "#228B22", "sidebar_light": "#E6F5E6", "text": "#FFFFFF"},
+    }
+}
+
+# --- 4. BOOT SEQUENCE ---
 if not st.session_state.booted:
     placeholder = st.empty()
     for i in range(10):
@@ -34,14 +53,17 @@ if not st.session_state.booted:
     placeholder.empty()
     st.session_state.booted = True
 
-# --- 4. SIDEBAR: EMOJI LOGO & BUTTON STYLING ---
+# --- 5. SIDEBAR: THEMES & BUTTON STYLING ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 100px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
 
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
-    with st.expander("🎨 Appearance & Themes"):
+    with st.expander("🎨 Appearance & Themes", expanded=True):
+        cat = st.selectbox("Category", list(THEMES.keys()))
+        style_name = st.selectbox("Style", list(THEMES[cat].keys()))
+        current_style = THEMES[cat][style_name]
         bg_opacity = st.slider("Pattern Visibility", 0.0, 1.0, 0.4)
     
     with st.expander("🔊 TTS Customization"):
@@ -74,11 +96,11 @@ with st.sidebar:
         if st.button(st.session_state.chat_names[cid], key=cid):
             st.session_state.current_chat_id = cid
 
-# --- 5. DYNAMIC CSS (FIXED SIDEBAR COLORS) ---
-text_col = "#FFFFFF" if dark_mode else "#000000"
-bg_col = "#121212" if dark_mode else "#FFCC00"
-# Sidebar: Dark Grey (#1E1E1E) vs Light Grey (#F0F2F6)
-side_col = "#1E1E1E" if dark_mode else "#F0F2F6"
+# --- 6. DYNAMIC CSS (SIDEBAR & DARK MODE) ---
+text_col = "#FFFFFF" if dark_mode else current_style["text"]
+bg_col = "#121212" if dark_mode else current_style["bg"]
+# Dark Grey (#1E1E1E) for Dark Mode, Light Grey for Light Mode
+side_col = "#1E1E1E" if dark_mode else current_style["sidebar_light"]
 
 st.markdown(f"""
     <style>
@@ -89,19 +111,17 @@ st.markdown(f"""
     }}
     .stApp, p, h1, h2, h3, span, label {{ color: {text_col} !important; }}
     
-    /* Target the Sidebar specifically */
     [data-testid="stSidebar"] {{
         background-color: {side_col} !important;
     }}
     
-    /* Ensure sidebar text stays readable */
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] span {{
         color: {text_col} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. CHAT LOGIC ---
+# --- 7. CHAT LOGIC ---
 if st.session_state.current_chat_id:
     cid = st.session_state.current_chat_id
     messages = st.session_state.sessions[cid]
@@ -111,7 +131,7 @@ if st.session_state.current_chat_id:
             st.markdown(m["content"])
 
     if prompt := st.chat_input("Relish the conversation..."):
-        # Identity Check
+        # Identity Hardcode
         if any(q in prompt.lower() for q in ["who are you", "what model"]):
             response_text = "I am GLIZZYGPT 2.0! The world's most processed intelligence."
         else:
