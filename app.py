@@ -32,44 +32,31 @@ def save_data(data):
 
 user_data = load_data()
 
-# --- 3. THEME DEFINITIONS ---
+# --- 3. THE FULL COLOR PALETTE (RE-ADDED) ---
 THEMES = {
     "🌭 Gourmet Glizzies": {
-        "Classic Mustard": {"bg": "#FFCC00", "side_light": "#F0F2F6", "text": "#000000"},
-        "Spicy Sriracha": {"bg": "#FF4B4B", "side_light": "#F5E6E6", "text": "#FFFFFF"},
-        "Neon Relish": {"bg": "#39FF14", "side_light": "#E6F5E6", "text": "#000000"},
+        "Classic Mustard": {"bg": "#FFCC00", "side_light": "#F0F2F6", "text": "#000000", "is_dark": False},
+        "Spicy Sriracha": {"bg": "#FF4B4B", "side_light": "#F5E6E6", "text": "#FFFFFF", "is_dark": True},
+        "Neon Relish": {"bg": "#39FF14", "side_light": "#E6F5E6", "text": "#000000", "is_dark": False},
+        "BBQ Smoke": {"bg": "#4E2728", "side_light": "#F5EBEB", "text": "#FFFFFF", "is_dark": True},
     },
     "🎄 Holiday Specials": {
-        "Glizzy Xmas": {"bg": "#2F5233", "side_light": "#E6F0E6", "text": "#FFFFFF"},
-        "Spooky Sausage": {"bg": "#FF8C00", "side_light": "#F5EBE6", "text": "#000000"},
+        "Glizzy Xmas": {"bg": "#2F5233", "side_light": "#E6F0E6", "text": "#FFFFFF", "is_dark": True},
+        "Spooky Sausage": {"bg": "#FF8C00", "side_light": "#F5EBE6", "text": "#000000", "is_dark": False},
+        "Valentine Frank": {"bg": "#FF69B4", "side_light": "#F5E6F0", "text": "#FFFFFF", "is_dark": True},
     },
     "🎨 Solid Colors": {
-        "Midnight Blue": {"bg": "#191970", "side_light": "#E6E6F5", "text": "#FFFFFF"},
-        "Forest Green": {"bg": "#228B22", "side_light": "#E6F5E6", "text": "#FFFFFF"},
+        "Midnight Blue": {"bg": "#191970", "side_light": "#E6E6F5", "text": "#FFFFFF", "is_dark": True},
+        "Forest Green": {"bg": "#228B22", "side_light": "#E6F5E6", "text": "#FFFFFF", "is_dark": True},
+        "Cyberpunk Pink": {"bg": "#FF00FF", "side_light": "#F5E6F5", "text": "#FFFFFF", "is_dark": True},
     }
 }
 
-# --- 4. BOOT SEQUENCE (RESTORED) ---
-if "booted" not in st.session_state:
-    placeholder = st.empty()
-    for i in range(10):
-        binary = "".join(["10"[j%2] for j in range(20)])
-        placeholder.markdown(f"""
-        <div style="text-align:center; padding-top:100px; background-color:#121212; height:100vh;">
-            <h1 style="font-size:80px;">🌭 🌭 🌭</h1>
-            <code style="color:#00FF00; background:black; padding:10px;">GLIZZY_OS_{st.session_state.user_id}: {binary}</code>
-        </div>
-        """, unsafe_allow_html=True)
-        time.sleep(0.1)
-    placeholder.empty()
-    st.session_state.booted = True
-
-# --- 5. SIDEBAR: THEMES, TOOLS & MEMORY ---
+# --- 4. SIDEBAR: THEMES & MEMORY ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 80px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
-    st.caption(f"ID: {st.session_state.user_id}")
-
+    
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
     with st.expander("🎨 Appearance & Themes", expanded=True):
@@ -78,52 +65,60 @@ with st.sidebar:
         current_style = THEMES[cat][style_name]
         bg_opacity = st.slider("Pattern Visibility", 0.0, 1.0, 0.4)
     
-    with st.expander("🔊 TTS & Voice (RESTORED)"):
-        disable_tts = st.toggle("Silent Mode", value=False)
-        voice_speed = st.slider("Talk Speed", 0.7, 1.5, 1.0)
-    
-    with st.expander("📬 Productivity Tools"):
-        st.button("📧 Connect Email")
-        st.button("🗓️ Connect Calendar")
-
     st.divider()
 
-    # HOT DOG BUTTON STYLING
+    # HOT DOG BUTTON STYLING (Forced Contrast)
     st.markdown("""<style>div.stButton > button:first-child {background-color: #FF9933 !important; color: black !important; font-weight: bold !important; width: 100% !important;}</style>""", unsafe_allow_html=True)
     
     if st.button("+ New Unique Chat"):
-        cid = str(time.time())
+        cid = str(time.uuid4())[:12]
         user_data["sessions"][cid] = []
         user_data["names"][cid] = "New Relish Chat"
         save_data(user_data)
         st.session_state.current_cid = cid
         st.rerun()
 
-    st.subheader("Chat Memory")
+    st.subheader("Memory History")
     for cid in reversed(list(user_data["sessions"].keys())):
         if st.button(user_data["names"][cid], key=cid):
             st.session_state.current_cid = cid
             st.rerun()
 
-# --- 6. DYNAMIC CSS ---
-text_col = "#FFFFFF" if dark_mode else current_style["text"]
-bg_col = "#121212" if dark_mode else current_style["bg"]
-side_col = "#1E1E1E" if dark_mode else current_style["side_light"]
+# --- 5. DYNAMIC LEGIBILITY ENGINE ---
+# This ensures text is ALWAYS readable regardless of background color
+if dark_mode:
+    main_txt_col = "#FFFFFF"
+    main_bg_col = "#121212"
+    sidebar_col = "#1E1E1E"
+else:
+    main_txt_col = current_style["text"]
+    main_bg_col = current_style["bg"]
+    sidebar_col = current_style["side_light"]
 
 st.markdown(f"""
     <style>
     .stApp {{
         background: linear-gradient(rgba(0,0,0,{1-bg_opacity}), rgba(0,0,0,{1-bg_opacity})), 
                     url("https://www.transparenttextures.com/patterns/food.png");
-        background-color: {bg_col};
+        background-color: {main_bg_col};
     }}
-    .stApp, p, h1, h2, h3, span, label {{ color: {text_col} !important; }}
-    [data-testid="stSidebar"] {{ background-color: {side_col} !important; }}
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {{ color: {text_col} !important; }}
+    /* Legibility Overrides */
+    .stApp, p, h1, h2, h3, span, label, .stMarkdown {{ 
+        color: {main_txt_col} !important; 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5) if not {dark_mode} else none;
+    }}
+    [data-testid="stSidebar"] {{ background-color: {sidebar_col} !important; }}
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {{ color: {main_txt_col} !important; }}
+    
+    /* Input Box Legibility */
+    .stChatInput textarea {{
+        background-color: rgba(255,255,255,0.1) !important;
+        color: {main_txt_col} !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 7. CHAT LOGIC ---
+# --- 6. CHAT LOGIC ---
 if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
@@ -158,10 +153,5 @@ if "current_cid" in st.session_state:
         user_data["sessions"][cid] = messages
         save_data(user_data)
         st.rerun()
-
-        if not disable_tts:
-            tts = gTTS(text=res_text, lang='en', slow=(voice_speed < 1.0))
-            tts.save("speech.mp3")
-            st.audio("speech.mp3", autoplay=True)
 else:
     st.info("👈 Create a '+ New Unique Chat' to begin.")
