@@ -18,7 +18,6 @@ if "user_id" not in st.session_state:
         st.session_state.user_id = new_id
         st.query_params["glizzy_id"] = new_id
 
-# Track the last processed audio to prevent loops
 if "last_processed_audio" not in st.session_state:
     st.session_state.last_processed_audio = None
 
@@ -40,10 +39,10 @@ user_data = load_data()
 if "booted" not in st.session_state:
     placeholder = st.empty()
     boot_logs = [
-        "Initializing GLIZZY_OS v2.0.7...",
-        "Applying Loop-Prevention Patches...",
-        f"USER_ID: {st.session_state.user_id} ACTIVE.",
-        "SYSTEM ONLINE."
+        "Initializing GLIZZY_OS v2.0.8...",
+        "Patching Audio Drivers... [OK]",
+        f"USER_ID: {st.session_state.user_id} DETECTED.",
+        "SYSTEM ONLINE. VOLUME 100%."
     ]
     full_log = ""
     for log in boot_logs:
@@ -73,6 +72,12 @@ with st.sidebar:
         enable_tts = st.toggle("Enable Voice Output", value=True)
         voice_lang = st.selectbox("Voice Accent", ["en", "en-uk", "en-au", "en-in"])
         voice_speed = st.slider("Speech Speed", 0.5, 1.5, 1.0)
+        
+        # DEBUG BUTTON
+        if st.button("🔊 Test Audio Output"):
+            test_tts = gTTS(text="Mustard check, one two, one two.", lang=voice_lang)
+            test_tts.save("test.mp3")
+            st.audio("test.mp3", autoplay=True)
 
     st.divider()
     st.markdown("""<style>div.stButton > button:first-child {background-color: #FF9933 !important; color: black !important; font-weight: bold !important; width: 100% !important;}</style>""", unsafe_allow_html=True)
@@ -112,7 +117,7 @@ if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
     
-    audio_val = st.audio_input("Record your Glizzy command") #
+    audio_val = st.audio_input("Record your Glizzy command") 
 
     for m in messages:
         with st.chat_message(m["role"], avatar="🌭" if m["role"]=="assistant" else "👤"):
@@ -123,8 +128,6 @@ if "current_cid" in st.session_state:
     final_prompt = None
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-    # 7. FIXED PROMPT HANDLING (LOOP PREVENTION)
-    # Check if we have new audio that hasn't been processed yet
     if audio_val and audio_val != st.session_state.last_processed_audio:
         with st.status("Transcribing..."):
             transcription = client.audio.transcriptions.create(
@@ -133,7 +136,6 @@ if "current_cid" in st.session_state:
                 response_format="text"
             )
             final_prompt = transcription
-            # Mark this specific audio as processed
             st.session_state.last_processed_audio = audio_val 
     elif prompt:
         final_prompt = prompt
@@ -163,10 +165,16 @@ if "current_cid" in st.session_state:
         user_data["sessions"][cid] = messages
         save_data(user_data)
         
+        # --- IMPROVED TTS TRIGGER ---
         if enable_tts:
-            tts = gTTS(text=res_text, lang=voice_lang, slow=(voice_speed < 1.0))
-            tts.save("speech.mp3")
-            st.audio("speech.mp3", autoplay=True)
+            try:
+                tts = gTTS(text=res_text, lang=voice_lang, slow=(voice_speed < 1.0))
+                # Use a unique filename for each turn to force browser refresh
+                audio_file = f"speech_{int(time.time())}.mp3"
+                tts.save(audio_file)
+                st.audio(audio_file, autoplay=True)
+            except Exception as e:
+                st.error(f"TTS Error: {e}")
             
         st.rerun()
 else:
