@@ -1,4 +1,4 @@
 streamlit
 groq
-streamlit-tts
-gtts
+gTTS
+streamlit-extras
