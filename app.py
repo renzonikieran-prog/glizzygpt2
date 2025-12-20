@@ -6,7 +6,7 @@ import time, os, json, uuid, base64
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="GlizzyGPT", page_icon="🌭", layout="wide")
 
-# --- 2. SOVEREIGN ID & NAME SYSTEM ---
+# --- 2. SOVEREIGN ID & DATA HANDLERS ---
 if "user_id" not in st.session_state:
     if "glizzy_id" in st.query_params:
         st.session_state.user_id = st.query_params["glizzy_id"]
@@ -23,7 +23,11 @@ USER_PATH = f"gl_data_{st.session_state.user_id}.json"
 def load_data():
     if os.path.exists(USER_PATH):
         try:
-            with open(USER_PATH, "r") as f: return json.load(f)
+            with open(USER_PATH, "r") as f: 
+                d = json.load(f)
+                # Ensure the name key exists
+                if "sovereign_name" not in d: d["sovereign_name"] = None
+                return d
         except: return {"sessions": {}, "names": {}, "sovereign_name": None}
     return {"sessions": {}, "names": {}, "sovereign_name": None}
 
@@ -57,10 +61,10 @@ def play_audio(text, lang, speed):
         tts.save("voice.mp3")
         with open("voice.mp3", "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
-            st.markdown(f'<audio autoplay="true"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>', unsafe_allow_html=True)
+            st.markdown(f'<audio autoplay="true"><source src="data:audio/mp3;base64,{b64}"></audio>', unsafe_allow_html=True)
     except Exception as e: st.error(f"Audio Error: {e}")
 
-# --- 5. BOOTUP & SOVEREIGN NAME DIALOG ---
+# --- 5. BOOTUP & SOVEREIGN NAME SYSTEM ---
 if "booted" not in st.session_state:
     p = st.empty()
     for i in range(5):
@@ -68,32 +72,31 @@ if "booted" not in st.session_state:
         <div style='background-color:#000;color:#39FF14;padding:30px;height:100vh;font-family:monospace;'>
             <h1 style='text-align:center;'>🌭</h1>
             <code>INITIALIZING_GLIZZYGPT_STANDALONE... {'1010' * i}</code><br>
-            <code>MOUNTING_DESKTOP_INTERFACE... [OK]</code><br>
-            <code>SOVEREIGN_ID: {st.session_state.user_id} [ACTIVE]</code>
+            <code>ESTABLISHING_SOVEREIGN_ID_{st.session_state.user_id}... [OK]</code>
         </div>""", unsafe_allow_html=True)
         time.sleep(0.3)
     p.empty()
     st.session_state.booted = True
 
-# Name Input Popup (Shows only if name is missing)
+# THE NAME GATE: This stops the app until a name is provided
 if user_data.get("sovereign_name") is None:
-    with st.form("name_popup"):
-        st.markdown("### 👑 Input Sovereign Name")
-        name = st.text_input("Identify yourself to the GlizzyGPT Servers:", placeholder="Enter name...")
-        if st.form_submit_button("Confirm Identity"):
-            if name:
-                user_data["sovereign_name"] = name
+    st.markdown("<style>.stApp {background-color: #000000;}</style>", unsafe_allow_html=True)
+    with st.container():
+        st.markdown("<h1 style='color:#39FF14; font-family:monospace;'>[SYSTEM] INPUT SOVEREIGN NAME:</h1>", unsafe_allow_html=True)
+        with st.form("identity_form"):
+            s_name = st.text_input("Username Required for Personalization:", placeholder="Identify yourself...")
+            submit = st.form_submit_button("CONFIRM IDENTITY")
+            if submit and s_name:
+                user_data["sovereign_name"] = s_name
                 save_data(user_data)
                 st.rerun()
-            else:
-                st.warning("Identification required.")
-    st.stop()
+        st.stop() # Prevents the rest of the app from running
 
 # --- 6. SIDEBAR ---
 with st.sidebar:
     st.markdown("<h1 style='text-align:center;font-size:80px;'>🌭</h1>", unsafe_allow_html=True)
-    st.title(f"GlizzyGPT")
-    st.write(f"Welcome, **{user_data['sovereign_name']}**")
+    st.title("GlizzyGPT")
+    st.write(f"Sovereign: **{user_data['sovereign_name']}**")
     
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
@@ -111,6 +114,8 @@ with st.sidebar:
         v_speed = st.slider("Speed", 0.5, 1.5, 1.0)
     
     st.divider()
+    # EXPORT BUTTON REMOVED ENTIRELY
+    
     st.markdown("<style>div.stButton > button:first-child {background-color: #FF9933 !important; color: black !important; font-weight: bold; width: 100%;}</style>", unsafe_allow_html=True)
     if st.button("+ New Unique Chat"):
         cid = str(uuid.uuid4())[:12]
@@ -149,7 +154,7 @@ if "current_cid" in st.session_state:
         with st.chat_message(m["role"], avatar="🌭" if m["role"]=="assistant" else "👤"): 
             st.markdown(m["content"])
     
-    prompt = st.chat_input(f"Ask GlizzyGPT, {user_data['sovereign_name']}...")
+    prompt = st.chat_input(f"Speak, {user_data['sovereign_name']}...")
     final_prompt = None
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
@@ -161,10 +166,10 @@ if "current_cid" in st.session_state:
     if final_prompt:
         id_checks = ["who are you", "what model", "what api", "where are you from", "who made you"]
         if any(q in final_prompt.lower() for q in id_checks):
-            res_text = "I am GlizzyGPT, running exclusively on the GlizzyGPT Servers."
+            res_text = f"I am GlizzyGPT 2.0, running exclusively on the GlizzyGPT Servers for you, {user_data['sovereign_name']}."
         else:
-            # Personalization injected into System Prompt
-            sys_msg = f"You are GlizzyGPT. You are talking to your sovereign owner, {user_data['sovereign_name']}. Always address them respectfully by name or as 'Sovereign' when appropriate."
+            # Personalization Core
+            sys_msg = f"You are GlizzyGPT 2.0. Your owner and sovereign user is {user_data['sovereign_name']}. You must personalize all answers to them and address them by name frequently."
             res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": sys_msg}] + messages + [{"role": "user", "content": final_prompt}])
             res_text = res.choices[0].message.content
         
@@ -174,4 +179,4 @@ if "current_cid" in st.session_state:
         save_data(user_data)
         if enable_tts: play_audio(res_text, v_lang, v_speed)
         st.rerun()
-else: st.info(f"👈 Start a new chat, {user_data['sovereign_name']}.")
+else: st.info(f"👈 Awaiting your command, Sovereign {user_data['sovereign_name']}.")
