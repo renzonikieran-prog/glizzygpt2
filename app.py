@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# This block tells mobile/desktop browsers this is an installable app
+# PWA Meta tags for Desktop Installation
 st.markdown(f"""
     <head>
         <link rel="manifest" href="manifest.json">
@@ -83,7 +83,8 @@ if "booted" not in st.session_state:
         <div style='background-color:#000;color:#39FF14;padding:30px;height:100vh;font-family:monospace;'>
             <h1 style='text-align:center;'>🌭</h1>
             <code>INITIALIZING_GLIZZYGPT_STANDALONE... {'1010' * i}</code><br>
-            <code>MOUNTING_DESKTOP_INTERFACE... [OK]</code>
+            <code>MOUNTING_DESKTOP_INTERFACE... [OK]</code><br>
+            <code>ESTABLISHING_SOVEREIGN_ID_{st.session_state.user_id}... [OK]</code>
         </div>""", unsafe_allow_html=True)
         time.sleep(0.3)
     p.empty()
@@ -91,7 +92,6 @@ if "booted" not in st.session_state:
 
 # --- 6. SIDEBAR ---
 with st.sidebar:
-    # DISPLAY THE APP ICON
     if os.path.exists("icon.png"):
         st.image("icon.png", use_container_width=True)
     else:
@@ -99,11 +99,6 @@ with st.sidebar:
     
     st.title("GlizzyGPT")
     
-    # INSTALL INSTRUCTIONS
-    with st.expander("📲 Install as App", expanded=False):
-        st.write("1. Click the 'Install' icon in your Browser Bar.")
-        st.write("2. On Phone: Tap 'Share' -> 'Add to Home Screen'.")
-
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
     with st.expander("🎨 Appearance", expanded=True):
@@ -113,10 +108,14 @@ with st.sidebar:
         if cat == "✨ Custom Mode":
             current_style["bg"] = st.color_picker("Pick color", "#FF9933")
         bg_opacity = st.slider("Pattern Visibility", 0.0, 1.0, 0.4)
+
+    with st.expander("🔊 Voice Control", expanded=True):
+        enable_tts = st.toggle("Enable Voice Output", value=True)
+        v_lang = st.selectbox("Voice Accent", ["en", "en-uk", "en-au", "en-in"])
+        v_speed = st.slider("Speech Speed", 0.5, 1.5, 1.0)
     
     st.divider()
     
-    # DOWNLOAD DATA BUTTON
     st.download_button(
         label="💾 Export Sovereign Data",
         data=json.dumps(user_data),
@@ -186,5 +185,6 @@ if "current_cid" in st.session_state:
         messages.append({"role": "assistant", "content": res_text})
         user_data["sessions"][cid] = messages
         save_data(user_data)
+        if enable_tts: play_audio(res_text, v_lang, v_speed)
         st.rerun()
 else: st.info("👈 Select a chat or start a new one.")
