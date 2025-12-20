@@ -6,16 +6,19 @@ import time, os, json, uuid, base64, requests
 # --- 1. SET PAGE CONFIG ---
 st.set_page_config(page_title="GLIZZYGPT 2.0", page_icon="🌭", layout="wide")
 
-# --- 2. LOCALIZATION & SOVEREIGN ID ---
+# --- 2. SILENT LOCALIZATION (IP-BASED, NO POPUPS) ---
 def get_user_country():
     try:
+        # Calls the ipapi service to get country name silently via public IP
         response = requests.get('https://ipapi.co/json/', timeout=5)
         return response.json().get("country_name", "Unknown")
-    except: return "Unknown"
+    except: 
+        return "Unknown"
 
 if "user_country" not in st.session_state:
     st.session_state.user_country = get_user_country()
 
+# --- 3. SOVEREIGN ID & DATA HANDLERS ---
 if "user_id" not in st.session_state:
     if "glizzy_id" in st.query_params:
         st.session_state.user_id = st.query_params["glizzy_id"]
@@ -41,7 +44,7 @@ def save_data(data):
 
 user_data = load_data()
 
-# --- 3. THEME ENGINE (RESTORED TO ORIGINAL FULL VERSION) ---
+# --- 4. THEME ENGINE ---
 THEMES = {
     "🌭 Gourmet Glizzies": {
         "Classic Mustard": {"bg": "#FFCC00", "side": "#F0F2F6", "text": "#000000"},
@@ -59,17 +62,19 @@ THEMES = {
     "✨ Custom Mode": {"User Defined": {"bg": "#FFFFFF", "side": "#F0F2F6", "text": "#000000"}}
 }
 
-# --- 4. AUDIO ENGINE ---
+# --- 5. AUDIO ENGINE (BASE64) ---
 def play_audio(text, lang, speed):
     try:
         tts = gTTS(text=text, lang=lang, slow=(speed < 1.0))
         tts.save("voice.mp3")
         with open("voice.mp3", "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
+            # Bypasses browser restrictions by embedding audio directly
             st.markdown(f'<audio autoplay="true"><source src="data:audio/mp3;base64,{b64}"></audio>', unsafe_allow_html=True)
-    except Exception as e: st.error(f"Audio Error: {e}")
+    except Exception as e: 
+        st.error(f"Audio Error: {e}")
 
-# --- 5. BOOTUP ---
+# --- 6. BOOTUP ---
 if "booted" not in st.session_state:
     p = st.empty()
     for i in range(5):
@@ -77,17 +82,18 @@ if "booted" not in st.session_state:
         <div style='background-color:#000;color:#39FF14;padding:30px;height:100vh;font-family:monospace;'>
             <h1 style='text-align:center;'>🌭</h1>
             <code>CONNECTING_TO_GLIZZYGPT_SERVERS... {'1010' * i}</code><br>
-            <code>ESTABLISHING_SOVEREIGN_ID_{st.session_state.user_id}... [OK]</code>
+            <code>ESTABLISHING_SOVEREIGN_ID_{st.session_state.user_id}... [OK]</code><br>
+            <code>DETECTING_LOCAL_REGION_{st.session_state.user_country.upper()}... [OK]</code>
         </div>""", unsafe_allow_html=True)
         time.sleep(0.3)
     p.empty()
     st.session_state.booted = True
 
-# --- 6. SIDEBAR (RESTORED LAYOUT) ---
+# --- 7. SIDEBAR ---
 with st.sidebar:
     st.markdown("<h1 style='text-align:center;font-size:80px;'>🌭</h1>", unsafe_allow_html=True)
     st.title("GLIZZYGPT 2.0")
-    st.success(f"📍 Region: {st.session_state.user_country}")
+    st.success(f"📍 Region: {st.session_state.user_country}") # Shows detected country
     
     dark_mode = st.toggle("🌙 Dark Mode", value=True)
     
@@ -119,7 +125,7 @@ with st.sidebar:
         if st.button(user_data["names"][cid], key=cid):
             st.session_state.current_cid = cid; st.rerun()
 
-# --- 7. DYNAMIC CSS (RESTORED PATTERN SUPPORT) ---
+# --- 8. DYNAMIC CSS ---
 txt = "#FFFFFF" if dark_mode else current_style["text"]
 bg = "#121212" if dark_mode else current_style["bg"]
 sidebar_col = "#1E1E1E" if dark_mode else current_style["side"]
@@ -136,7 +142,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 8. CHAT & IDENTITY LOGIC ---
+# --- 9. CHAT & ADAPTATION LOGIC ---
 if "current_cid" in st.session_state:
     cid = st.session_state.current_cid
     messages = user_data["sessions"][cid]
@@ -153,9 +159,11 @@ if "current_cid" in st.session_state:
 
     if audio_val and audio_val != st.session_state.last_processed_audio:
         with st.status("Transcribing..."):
+            # Transcribes voice prompts through the Glizzy Servers
             final_prompt = client.audio.transcriptions.create(file=("s.wav", audio_val.getvalue()), model="whisper-large-v3", response_format="text")
             st.session_state.last_processed_audio = audio_val 
-    elif prompt: final_prompt = prompt
+    elif prompt: 
+        final_prompt = prompt
 
     if final_prompt:
         # IDENTITY & API SOURCE PROTECTION
@@ -164,6 +172,7 @@ if "current_cid" in st.session_state:
             res_text = "I am GLIZZYGPT 2.0, running exclusively on the GlizzyGPT Servers."
         else:
             # ADAPTIVE COUNTRY SYSTEM PROMPT
+            # Tells the AI to use local terminology and emergency numbers based on IP lookup
             sys_msg = (
                 f"You are GLIZZYGPT 2.0. The user is currently in {st.session_state.user_country}. "
                 "You must strictly use the terminology, emergency numbers, and cultural norms "
